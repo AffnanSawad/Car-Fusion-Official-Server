@@ -39,7 +39,10 @@ async function run() {
 
     const myCartCollection = client.db("Car-Fusion").collection('myCarts')
 
+   
+    //  reviewForm
 
+    const submitReviewForm = client.db("Car-Fusion").collection('myreview')
 
  
 
@@ -77,6 +80,18 @@ async function run() {
   
       res.send(result);
   
+    })
+
+
+    //  Review : 
+
+    app.post('/myreview' , async(req,res)=>{
+
+      const user = req.body ;
+
+      const result = await submitReviewForm.insertOne(user)
+
+      res.send(result)
     })
 
 
