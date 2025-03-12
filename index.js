@@ -3,16 +3,21 @@ const app = express();
 const cors = require('cors');
 const port = process.env.port || 5000
 
+require('dotenv').config();
+
+// stripe.payment related
+const stripe = require('stripe')(process.env.STRIPE_SECRET_KEY);
+
 app.use(express.json())
 app.use(cors())
 
-require('dotenv').config
 
 
 
 
 
-const { MongoClient, ServerApiVersion } = require('mongodb');
+
+const { MongoClient, ServerApiVersion, ObjectId } = require('mongodb');
 const uri = 'mongodb+srv://Car-Fusion-Ltd:Abc123456@atlascluster.5qhzsjb.mongodb.net/?retryWrites=true&w=majority&appName=AtlasCluster';
 
 // Create a MongoClient with a MongoClientOptions object to set the Stable API version
@@ -43,6 +48,13 @@ async function run() {
     //  reviewForm
 
     const submitReviewForm = client.db("Car-Fusion").collection('myreview')
+    
+    // payment
+    const paymentCollection = client.db("Car-Fusion").collection('payments');
+
+    // user selling car :
+
+    const userSellingCar = client.db('Car-Fusion').collection('sellingCars');
 
  
 
@@ -83,6 +95,21 @@ async function run() {
     })
 
 
+      //  delete item from my cart
+  app.delete( '/myCarts/:id' , async(req,res)=>{
+     
+    const id = req.params.id;
+
+    const query = { _id : new ObjectId(id)  };
+
+    const result = await myCartCollection.deleteOne(query);
+
+    res.send(result);
+
+
+  })
+
+
     //  Review : 
 
     app.post('/myreview' , async(req,res)=>{
@@ -93,6 +120,72 @@ async function run() {
 
       res.send(result)
     })
+
+
+    // User Selling Cars :
+    app.post('/sellingCars', async(req,res)=>{
+
+   
+      const user = req.body ;
+
+      const result = await userSellingCar.insertOne(user)
+
+      res.send(result)
+
+
+    })
+
+
+
+    // Payments= stripe
+     // payment intent
+     app.post('/create-payment-intent', async (req, res) => {
+      const { price } = req.body;
+      const amount = parseInt(price * 100);
+      console.log(amount, 'amount inside the intent')
+
+      const paymentIntent = await stripe.paymentIntents.create({
+        amount: amount,
+        currency: 'usd',
+        payment_method_types: ['card']
+      });
+
+      res.send({
+        clientSecret: paymentIntent.client_secret
+      })
+    });
+
+
+    // app.get('/payments/:email',  async (req, res) => {
+    //   const query = { email: req.params.email }
+    //   if (req.params.email !== req.decoded.email) {
+    //     return res.status(403).send({ message: 'forbidden access' });
+    //   }
+    //   const result = await paymentCollection.find(query).toArray();
+    //   res.send(result);
+    // })
+
+    app.post('/payments', async (req, res) => {
+      const payment = req.body;
+      const paymentResult = await paymentCollection.insertOne(payment);
+
+      //  carefully delete each item from the cart
+      console.log('payment info', payment);
+      const query = {
+        _id: {
+          $in: payment.cartIds.map(id => new ObjectId(id))
+        }
+      };
+
+      const deleteResult = await myCartCollection.deleteMany(query);
+
+      res.send({ paymentResult, deleteResult });
+    })
+
+
+    // 
+
+
 
 
 
