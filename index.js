@@ -1,15 +1,25 @@
 const express = require('express');
 const app = express();
 const cors = require('cors');
-const port = process.env.port || 5000
+const port = process.env.PORT || 5000
+
+// jwt
+const jwt = require('jsonwebtoken')
+const cookieParser = require('cookie-parser')
 
 require('dotenv').config();
 
 // stripe.payment related
 const stripe = require('stripe')(process.env.STRIPE_SECRET_KEY);
 
+
+// Middlewares : 
 app.use(express.json())
-app.use(cors())
+app.use(cors({
+  origin:['http://localhost:5173'],
+  credentials: true
+}))
+app.use(cookieParser())
 
 
 
@@ -18,6 +28,7 @@ app.use(cors())
 
 
 const { MongoClient, ServerApiVersion, ObjectId } = require('mongodb');
+
 const uri = 'mongodb+srv://Car-Fusion-Ltd:Abc123456@atlascluster.5qhzsjb.mongodb.net/?retryWrites=true&w=majority&appName=AtlasCluster';
 
 // Create a MongoClient with a MongoClientOptions object to set the Stable API version
@@ -28,6 +39,36 @@ const client = new MongoClient(uri, {
     deprecationErrors: true,
   }
 });
+
+
+
+//  JWT MIDDLEWARES :
+
+const logger = (req,res,next)=>{
+  console.log('log-info', req.method , req.url);
+
+  next();
+}
+
+const verifyToken = (req,res,next)=> {
+
+  const token = req?.cookies?.token ;
+
+  if(!token){
+
+    return res.status(401).send({message:'Unauthorized Access'})
+  }
+  jwt.verify(token, process.env.ACCESS_TOKEN,
+
+    (err,decoded)=>{
+      if(err){
+        return res.status(401).send({message:'Unauthorized Access'})
+      }
+      req.user = decoded;
+      next()
+    }
+  )
+}
 
 async function run() {
   try {
@@ -56,11 +97,41 @@ async function run() {
 
     const userSellingCar = client.db('Car-Fusion').collection('sellingCars');
 
- 
+   
+    // JWT Related API :
+
+    // Token Generating :
+    app.post('/jwt', logger,verifyToken, async(req,res)=>{
+
+      const user = req.body ;
+
+      console.log('JWT Token Generating' , user);
+
+      const token = jwt.sign(user, process.env.ACCESS_TOKEN, {expiresIn:'1h'})
+
+      res.cookie('token',token,{
+        httpOnly: true ,
+        secure:true ,
+        sameSite:'none' 
+      }).send({success: true})
+    })
+
+    app.post('/logout', async(req,res)=>{
+
+      const user = req.body ;
+
+      console.log('logout jwt ',user);
+
+      res.clearCookie('token', {maxAge:0}).send({success:true})
+    })
+
+
+
+
 
     //  CRUD OPERATIONS :
 
-    app.get('/CarsCollections' , async(req,res)=>{
+    app.get('/CarsCollections' ,  async(req,res)=>{
     
         const curson = carsCollections.find()
         const result = await curson.toArray()
@@ -71,7 +142,7 @@ async function run() {
 
 
     // DashBoard Carts
-    app.post('/myCarts' ,async(req,res)=>{
+    app.post('/myCarts' , async(req,res)=>{
        
       const user = req.body ;
 
@@ -81,7 +152,7 @@ async function run() {
 
     })
 
-    app.get( '/myCarts' , async(req,res)=>{
+    app.get( '/myCarts' ,  async(req,res)=>{
      
       // email filtering and get data as the email
       const email = req.query.email;
@@ -123,7 +194,7 @@ async function run() {
 
 
     // User Selling Cars :
-    app.post('/sellingCars', async(req,res)=>{
+    app.post('/sellingCars',  async(req,res)=>{
 
    
       const user = req.body ;
@@ -139,7 +210,7 @@ async function run() {
 
     // Payments= stripe
      // payment intent
-     app.post('/create-payment-intent', async (req, res) => {
+     app.post('/create-payment-intent',  async (req, res) => {
       const { price } = req.body;
       const amount = parseInt(price * 100);
       console.log(amount, 'amount inside the intent')
@@ -165,7 +236,7 @@ async function run() {
     //   res.send(result);
     // })
 
-    app.post('/payments', async (req, res) => {
+    app.post('/payments',  async (req, res) => {
       const payment = req.body;
       const paymentResult = await paymentCollection.insertOne(payment);
 
@@ -213,5 +284,5 @@ app.get('/',(req,res)=>{
 
 app.listen(port , ()=>{
 
-    console.log(`Suerver is running for Car Fusion Ltd on ${port}`)
+    console.log(`Server is running for Car Fusion Ltd on ${port}`)
 })
