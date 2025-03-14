@@ -29,7 +29,7 @@ app.use(cookieParser())
 
 const { MongoClient, ServerApiVersion, ObjectId } = require('mongodb');
 
-const uri = 'mongodb+srv://Car-Fusion-Ltd:Abc123456@atlascluster.5qhzsjb.mongodb.net/?retryWrites=true&w=majority&appName=AtlasCluster';
+const uri = `mongodb+srv://${process.env.DB_USER}:${process.env.DB_PASS}@atlascluster.5qhzsjb.mongodb.net/?retryWrites=true&w=majority&appName=AtlasCluster`;
 
 // Create a MongoClient with a MongoClientOptions object to set the Stable API version
 const client = new MongoClient(uri, {
