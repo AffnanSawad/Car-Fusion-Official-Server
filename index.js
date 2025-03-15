@@ -15,10 +15,7 @@ const stripe = require('stripe')(process.env.STRIPE_SECRET_KEY);
 
 // Middlewares : 
 app.use(express.json())
-app.use(cors({
-  origin:['http://localhost:5173'],
-  credentials: true
-}))
+app.use(cors())
 app.use(cookieParser())
 
 
@@ -70,6 +67,10 @@ const verifyToken = (req,res,next)=> {
   )
 }
 
+//  JWT MIDDLEWARE ENDS 
+
+
+
 async function run() {
   try {
     // Connect the client to the server	(optional starting in v4.7)
@@ -96,6 +97,8 @@ async function run() {
     // user selling car :
 
     const userSellingCar = client.db('Car-Fusion').collection('sellingCars');
+
+    //  DATABASE COLLECTION ENDS HERE : MONGODB ATLAS => BROWSE COLLECTION
 
    
     // JWT Related API :
@@ -124,7 +127,8 @@ async function run() {
 
       res.clearCookie('token', {maxAge:0}).send({success:true})
     })
-
+  
+    //  JWT RELATED API'S ENDING 
 
 
 
@@ -227,14 +231,6 @@ async function run() {
     });
 
 
-    // app.get('/payments/:email',  async (req, res) => {
-    //   const query = { email: req.params.email }
-    //   if (req.params.email !== req.decoded.email) {
-    //     return res.status(403).send({ message: 'forbidden access' });
-    //   }
-    //   const result = await paymentCollection.find(query).toArray();
-    //   res.send(result);
-    // })
 
     app.post('/payments',  async (req, res) => {
       const payment = req.body;
@@ -254,7 +250,7 @@ async function run() {
     })
 
 
-    // 
+    // CRUD OPERATIONS ENDING HERE : 
 
 
 
@@ -263,8 +259,8 @@ async function run() {
 
 
     // Send a ping to confirm a successful connection
-    await client.db("admin").command({ ping: 1 });
-    console.log("Pinged your deployment. You successfully connected to MongoDB!");
+    // await client.db("admin").command({ ping: 1 });
+    // console.log("Pinged your deployment. You successfully connected to MongoDB!");
   } finally {
     // // Ensures that the client will close when you finish/error
     // await client.close();
